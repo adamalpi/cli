@@ -17,14 +17,11 @@ package up
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/datarobot/cli/internal/config"
 	"github.com/datarobot/cli/internal/drapi"
-	"github.com/datarobot/cli/internal/log"
+	"github.com/datarobot/cli/internal/workload"
 	"github.com/datarobot/cli/tui"
 )
 
@@ -38,7 +35,6 @@ type endpointCheckAuthMode string
 const (
 	endpointCheckAnonymous     endpointCheckAuthMode = "anonymous"
 	endpointCheckAuthenticated endpointCheckAuthMode = "authenticated"
-	workloadEndpointPathPrefix                       = config.DRAPIURLSuffix + "/endpoints/workloads/"
 )
 
 // checkEndpointFn performs the GET, swapped by tests. The request is
@@ -178,33 +174,16 @@ func verifyEndpoint(result Result, unconfirmed string, report *reporter) (interr
 // workload endpoint policy: only DataRobot public workload ingress URLs receive
 // the CLI token, because direct service URLs can be owned by user containers.
 func endpointCheckAuthForURL(rawURL string) (endpointCheckAuthMode, error) {
-	endpointURL, err := url.Parse(rawURL)
+	takesToken, err := workload.EndpointTakesToken(rawURL)
 	if err != nil {
-		return "", fmt.Errorf("parse endpoint URL %q: %w", rawURL, err)
+		return "", err
 	}
 
-	if endpointURL.Scheme == "" || endpointURL.Host == "" {
-		return "", fmt.Errorf("endpoint URL %q is not absolute", rawURL)
+	if takesToken {
+		return endpointCheckAuthenticated, nil
 	}
 
-	if !strings.HasPrefix(endpointURL.EscapedPath(), workloadEndpointPathPrefix) {
-		return endpointCheckAnonymous, nil
-	}
-
-	matches, err := drapi.URLMatchesConfiguredBase(rawURL)
-	if err != nil || !matches {
-		// Public workload paths only receive credentials when they are on the
-		// configured DataRobot origin. Log the anonymous fallback so debug users
-		// can distinguish a gateway 401 from an intentional token-withheld check.
-		log.Debug("endpoint check: withholding token because endpoint URL does not match configured base",
-			"endpoint", rawURL,
-			"configured_base", config.GetBaseURL(),
-			"error", err)
-
-		return endpointCheckAnonymous, nil
-	}
-
-	return endpointCheckAuthenticated, nil
+	return endpointCheckAnonymous, nil
 }
 
 // httpStatusLabel renders "404 Not Found" rather than a bare number, because

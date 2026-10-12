@@ -56,3 +56,21 @@ func TestCmd_RegistersEveryVerbWithoutTheGate(t *testing.T) {
 		assert.True(t, registered[name], "dr workload %s must be registered without the gate", name)
 	}
 }
+
+func TestCmd_InvokeIsAlpha(t *testing.T) {
+	registered := func() bool {
+		for _, sub := range Cmd().Commands() {
+			if sub.Name() == "invoke" {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	t.Setenv("DATAROBOT_CLI_FEATURE_WORKLOAD_ALPHA", "")
+	assert.False(t, registered(), "invoke must stay hidden without the alpha gate")
+
+	t.Setenv("DATAROBOT_CLI_FEATURE_WORKLOAD_ALPHA", "true")
+	assert.True(t, registered(), "invoke must be registered with the alpha gate")
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/datarobot/cli/cmd/workload/endpoint"
 	"github.com/datarobot/cli/cmd/workload/events"
 	"github.com/datarobot/cli/cmd/workload/get"
+	"github.com/datarobot/cli/cmd/workload/invoke"
 	"github.com/datarobot/cli/cmd/workload/list"
 	"github.com/datarobot/cli/cmd/workload/logs"
 	"github.com/datarobot/cli/cmd/workload/promote"
@@ -45,10 +46,10 @@ func Cmd() *cobra.Command {
 Manage and monitor workloads in your deployment infrastructure.`,
 	}
 
-	// Registered through the adder so a future alpha subcommand can be gated
-	// with features.SetGate(c, "workload-alpha"), which keeps it out of help,
+	// Registered through the adder so an alpha subcommand can be gated with
+	// features.SetGate(c, "workload-alpha"), which keeps it out of help,
 	// completion and dispatch until DATAROBOT_CLI_FEATURE_WORKLOAD_ALPHA=true.
-	// Nothing here is gated today.
+	// Only invoke is gated today.
 	adder := &cli.CommandAdder{Command: cmd}
 	adder.AddCommand(
 		// Setup, and the one subcommand here that never calls the API: it
@@ -64,6 +65,7 @@ Manage and monitor workloads in your deployment infrastructure.`,
 		endpoint.Cmd(),
 		events.Cmd(),
 		get.Cmd(),
+		invoke.Cmd(),
 		list.Cmd(),
 		logs.Cmd(),
 		promote.Cmd(),
