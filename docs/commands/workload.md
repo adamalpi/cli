@@ -54,6 +54,7 @@ Starting from source code rather than from a spec you already have? The [spec re
 | `dr workload endpoint` | `GET    /api/v2/workloads/{id}/`          | Print the endpoint URL.                        |
 | `dr workload logs`     | `GET    /api/v2/otel/workload/{id}/logs/` | Show a workload's container logs.              |
 | `dr workload events`   | `GET    /api/v2/workloads/{id}/events/`   | Show a workload's lifecycle events.            |
+| `dr workload history`  | `GET    /api/v2/workloads/{id}/history/`  | Show a workload's rollout history.             |
 
 ## Subcommands
 
@@ -349,6 +350,21 @@ dr workload events [<workload-id>] [--dir <path>] [--limit N] [--type <text>]...
 - `--output-format <text|json>`: output format. Defaults to `text`. JSON is one `{"events": [...]}` document, with `[]` when nothing matched.
 
 The event route takes no filters of its own, so the trail is read whole and narrowed on your side. A workload's trail is short, a page or two at most, so this costs nothing you would notice.
+
+### `history`
+
+Show the rollouts the platform recorded for a workload: each time it moved to an artifact or changed its runtime, which artifact, the strategy, and how it ended. Where `events` is every lifecycle change, `history` is one row per rollout.
+
+The most recent `--limit` entries are printed newest first. The table carries the platform's own message for each rollout; `--output-format json` gives the complete records, runtime and config included.
+
+```bash
+dr workload history [<workload-id>] [--dir <path>] [--limit N] [--output-format text|json]
+```
+
+**Flags:**
+
+- `--limit <N>`: number of recent rollouts to show. Defaults to `20`.
+- `--output-format <text|json>`: output format. Defaults to `text`. JSON is one `{"history": [...]}` document, with `[]` when there is none.
 
 ## Working in a project directory
 

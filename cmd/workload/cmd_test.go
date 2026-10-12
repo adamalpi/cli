@@ -50,7 +50,7 @@ func TestCmd_RegistersEveryVerbWithoutTheGate(t *testing.T) {
 	}
 
 	for _, name := range []string{
-		"config", "create", "delete", "diagnose", "endpoint", "events", "get", "list",
+		"config", "create", "delete", "diagnose", "endpoint", "events", "get", "history", "list",
 		"logs", "promote", "settings", "start", "status", "stop", "up",
 	} {
 		assert.True(t, registered[name], "dr workload %s must be registered without the gate", name)
