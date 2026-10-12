@@ -191,7 +191,8 @@ func IsWorkloadErrorStatus(s string) bool {
 
 // Workload is the projection of the server's workload document the CLI
 // renders. Server-side extras (owners, permissions, creator, stats) are
-// deliberately not parsed so they cannot leak into scripted output.
+// deliberately not parsed so they cannot leak into scripted output; only
+// `dr workload get` shows them, through WorkloadDetails.
 type Workload struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`
@@ -398,19 +399,22 @@ func escapeID(id string) string {
 }
 
 func GetWorkload(workloadID string) (*Workload, error) {
-	url, err := config.GetEndpointURL("/api/v2/workloads/" + escapeID(workloadID) + "/")
-	if err != nil {
-		return nil, err
-	}
-
 	var workload Workload
 
-	err = drapi.GetJSON(url, "workload", &workload)
-	if err != nil {
+	if err := getWorkloadDoc(workloadID, &workload); err != nil {
 		return nil, err
 	}
 
 	return &workload, nil
+}
+
+func getWorkloadDoc(workloadID string, v any) error {
+	url, err := config.GetEndpointURL("/api/v2/workloads/" + escapeID(workloadID) + "/")
+	if err != nil {
+		return err
+	}
+
+	return drapi.GetJSON(url, "workload", v)
 }
 
 // Serving is what a wait must see before it settles. The zero value asks only

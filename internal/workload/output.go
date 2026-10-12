@@ -419,10 +419,36 @@ func printWorkloadsJSON(workloads []Workload) error {
 	return outputformat.PrintJSONEnvelope(os.Stdout, "workloads", outputs)
 }
 
-func printWorkloadDetails(workload Workload) {
-	endpoint := orPlaceholder(workload.Endpoint)
+func RenderWorkloadDetails(format outputformat.OutputFormat, details WorkloadDetails) error {
+	if format == outputformat.OutputFormatJSON {
+		data, err := json.MarshalIndent(NewWorkloadDetailsOutput(details), "", "  ")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(data))
+
+		return nil
+	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	writeWorkloadFields(w, details.Workload)
+	writeWorkloadExtras(w, details)
+
+	return w.Flush()
+}
+
+func printWorkloadDetails(workload Workload) {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	writeWorkloadFields(w, workload)
+
+	w.Flush()
+}
+
+func writeWorkloadFields(w io.Writer, workload Workload) {
+	endpoint := orPlaceholder(workload.Endpoint)
 
 	fmt.Fprintf(w, "ID:\t%s\n", workload.ID)
 	fmt.Fprintf(w, "Name:\t%s\n", workload.Name)
@@ -433,8 +459,97 @@ func printWorkloadDetails(workload Workload) {
 	fmt.Fprintf(w, "Artifact ID:\t%s\n", workload.ArtifactID)
 	fmt.Fprintf(w, "Created:\t%s\n", workload.CreatedAt.UTC().Format(timestampFormat))
 	fmt.Fprintf(w, "Updated:\t%s\n", workload.UpdatedAt.UTC().Format(timestampFormat))
+}
 
-	w.Flush()
+func writeWorkloadExtras(w io.Writer, d WorkloadDetails) {
+	if d.UIURL != "" {
+		fmt.Fprintf(w, "UI:\t%s\n", d.UIURL)
+	}
+
+	groups := d.Runtime.ContainerGroups
+
+	for _, g := range groups {
+		bundle := bundleSummary(g)
+		if bundle == "" {
+			continue
+		}
+
+		if len(groups) > 1 {
+			bundle = g.Name + ": " + bundle
+		}
+
+		fmt.Fprintf(w, "Bundle:\t%s\n", bundle)
+	}
+
+	if s := d.RequestStats; s != nil {
+		fmt.Fprintf(w, "Requests (%s):\t%d, %.1f%% errors, median %d ms\n",
+			requestStatsWindowLabel, s.TotalRequests, s.TotalErrorRate*100, s.ResponseTime)
+	}
+
+	for _, o := range d.Owners {
+		fmt.Fprintf(w, "Owner:\t%s\n", userLabel(o))
+	}
+
+	if len(d.Permissions) > 0 {
+		fmt.Fprintf(w, "Permissions:\t%s\n", strings.Join(d.Permissions, ", "))
+	}
+
+	if len(d.Tags) > 0 {
+		tags := make([]string, 0, len(d.Tags))
+		for _, t := range d.Tags {
+			tags = append(tags, t.Name+"="+t.Value)
+		}
+
+		fmt.Fprintf(w, "Tags:\t%s\n", strings.Join(tags, ", "))
+	}
+}
+
+// bundleSummary is the bundle the platform resolved with its size, or the
+// one asked for while it has not answered.
+func bundleSummary(g ContainerGroupSettings) string {
+	b := g.ResolvedBundle
+	if b == nil || b.ID == "" {
+		if len(g.ResourceBundles) == 0 {
+			return ""
+		}
+
+		return strings.Join(g.ResourceBundles, ", ") + " (requested)"
+	}
+
+	size := strconv.FormatFloat(b.CPUCount, 'f', -1, 64) + " CPU, " + formatMemory(b.MemoryBytes)
+
+	if b.GPUCount > 0 {
+		size += fmt.Sprintf(", %d GPU", b.GPUCount)
+
+		if b.GPUTypeLabel != nil && *b.GPUTypeLabel != "" {
+			size += " " + *b.GPUTypeLabel
+		}
+	}
+
+	return b.ID + " (" + size + ")"
+}
+
+func formatMemory(bytes int64) string {
+	const mib, gib = 1 << 20, 1 << 30
+
+	if bytes >= gib {
+		return strconv.FormatFloat(float64(bytes*10/gib)/10, 'f', -1, 64) + " GiB"
+	}
+
+	return strconv.FormatInt(bytes/mib, 10) + " MiB"
+}
+
+func userLabel(u WorkloadUser) string {
+	switch {
+	case u.FullName != "" && u.Email != "":
+		return u.FullName + " <" + u.Email + ">"
+	case u.FullName != "":
+		return u.FullName
+	case u.Email != "":
+		return u.Email
+	default:
+		return u.ID
+	}
 }
 
 func printWorkloadsTable(workloads []Workload) {

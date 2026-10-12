@@ -38,6 +38,10 @@ This command fetches a workload by ID and shows:
   • Endpoint URL (stable from creation; serves traffic once running)
   • Artifact ID, type, and importance
   • Creation and last update timestamps
+  • A link to the workload in the DataRobot UI
+  • The resource bundle it runs on
+  • Requests over the last 7 days: count, error rate, median latency
+  • Owners, your permissions, and tags
 
 Statuses progress submitted → provisioning → launching → running. Re-run
 this command until the status is "running", then call the endpoint.
@@ -63,12 +67,12 @@ Example:
 				return err
 			}
 
-			wl, err := workload.GetWorkload(ref.ID)
+			wl, err := workload.GetWorkloadDetails(ref.ID)
 			if err != nil {
 				return ref.Wrap(err)
 			}
 
-			return workload.RenderWorkload(outputFormat, *wl)
+			return workload.RenderWorkloadDetails(outputFormat, *wl)
 		},
 	}
 

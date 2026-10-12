@@ -157,7 +157,7 @@ To define the artifact in the same call instead of referencing one, replace `art
 
 ### `get`
 
-Show a single workload: name, status, endpoint, artifact, and timestamps.
+Show a single workload: name, status, endpoint, artifact, and timestamps. When the platform has them, it also shows a link to the workload in the DataRobot UI, the resource bundle it runs on, requests over the last 7 days (count, error rate, median latency), owners, your permissions, and tags. If the request stats cannot be read, they are left out and the rest of the workload is still shown.
 
 ```bash
 dr workload get [<workload-id>] [--dir <path>] [--output-format text|json]
